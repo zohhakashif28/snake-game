@@ -1,16 +1,11 @@
-#ifndef ENEMY_H
-#define ENEMY_H
+#pragma once
+#include "snake.h"
 
-#include "GameObject.h"
-
-class Enemy : public GameObject {
+class Enemy : public Snake {
 public:
-    Vector2 speed;
     bool active;
 
-    Enemy();
-    void Init(Vector2 offset);
+    Enemy(Vector2 pos, Vector2 spd);
     void Update(Vector2 offset);
+    void Draw() override;
 };
-
-#endif
