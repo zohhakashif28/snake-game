@@ -1,148 +1,156 @@
-#include "Game.h"
+#include "player.h"
+#include "food.h"
+#include "enemy.h"
+#include "trap.h"
+#include "constants.h"
 #include "raylib.h"
-
-#define screenWidth 800
-#define screenHeight 450
-#define BASE_ENEMIES 2
-#define MAX_TRAPS 5
-#define SQUARE_SIZE 31
-#define MAX_LIVES 3
-
-//Game::Game() {
-//    Init();
-//}
-Game::Game() : player({ 100, 100 }, { 0, 0 }) {
+#include <vector>
+#include"game.h"
+Game:: Game() : player({ screenWidth / 2.0f, screenHeight / 2.0f }, { 0, 0 }), level(1) {
     Init();
 }
 
 
-void Game::Init() {
-    offset = { 60, 60 };
-    framesCounter = 0;
-    gameOver = false;
-    //level = 1;
-    //speedFactor = 1.0f;
+void Game:: Init() {
     speedFactor = 1.0f + level * 0.2f;
 
-    player = Player({ 100, 100 }, { 0, 0 });
-    fruit = Food();
-
+    offset = { (float)(screenWidth % SQUARE_SIZE), (float)(screenHeight % SQUARE_SIZE) };
+    framesCounter = 0;
+    gameOver = false;
     traps.clear();
-    for (int i = 0; i < level && i < MAX_TRAPS; i++) {
+    enemies.clear();
+
+    float speedFactor = 1.0f + level * 0.2f;
+    int numEnemies = BASE_ENEMIES + level;
+
+    for (int i = 0; i < numEnemies; i++) {
+        Vector2 pos = {
+            (float)(GetRandomValue(0, screenWidth / SQUARE_SIZE - 1) * SQUARE_SIZE + offset.x / 2),
+            (float)(GetRandomValue(0, screenHeight / SQUARE_SIZE - 1) * SQUARE_SIZE + offset.y / 2)
+        };
+        Vector2 spd = { SQUARE_SIZE / 40.0f * speedFactor, 0 };
+        if (GetRandomValue(0, 1)) std::swap(spd.x, spd.y);
+        enemies.push_back(new Enemy(pos, spd));
+    }
+
+    for (int i = 0; i < level * MAX_TRAPS; i++) {
         Vector2 trapPos = {
             (float)(GetRandomValue(0, screenWidth / SQUARE_SIZE - 1) * SQUARE_SIZE + offset.x / 2),
             (float)(GetRandomValue(0, screenHeight / SQUARE_SIZE - 1) * SQUARE_SIZE + offset.y / 2)
         };
-        traps.push_back(Trap(trapPos));
+        traps.emplace_back(trapPos);
     }
 
-    for (auto enemy : enemies) delete enemy;
-    enemies.clear();
-    for (int i = 0; i < BASE_ENEMIES + level; i++) {
-        Vector2 enemyPos = {
-            (float)(GetRandomValue(0, screenWidth / SQUARE_SIZE - 1) * SQUARE_SIZE + offset.x / 2),
-            (float)(GetRandomValue(0, screenHeight / SQUARE_SIZE - 1) * SQUARE_SIZE + offset.y / 2)
-        };
-        Vector2 enemySpd = { (float)((GetRandomValue(0, 1) * 2 - 1) * 2), (float)((GetRandomValue(0, 1) * 2 - 1) * 2) };
-        enemies.push_back(new Enemy(enemyPos, enemySpd));
-    }
-
-    fruit.Spawn(offset);
+    fruit.active = false;
 }
 
-void Game::Update() {
+void Game:: Update() {
+
+
+
     if (gameOver) {
-        if (IsKeyPressed(KEY_ENTER)) {
-            gameOver = false;
-            Init();
-        }
+        if (IsKeyPressed(KEY_ENTER)) *this = Game();
         return;
     }
 
-    framesCounter++;
     player.HandleInput(speedFactor);
-
-    if ((framesCounter % 10) == 0) {
+    if (framesCounter % 5 == 0)
         player.Update();
-        for (auto& enemy : enemies) {
-            enemy->Update(offset);
+
+    for (Enemy* enemy : enemies) {
+        if (!enemy->active) continue;
+
+        enemy->Update(offset);
+
+        // Collision with head
+        if (CheckCollisionRecs(player.GetRect(), enemy->GetRect())) {
+            player.lives--;
+            enemy->active = false;
+            if (player.lives <= 0) gameOver = true;
+            continue;
         }
 
-        for (auto& trap : traps) {
-            if (CheckCollisionRecs(player.GetRect(), trap.GetRect())) {
-                player.lives--;
-                if (player.lives <= 0) gameOver = true;
-            }
-        }
-
-        for (auto& enemy : enemies) {
-            if (enemy->active && CheckCollisionRecs(player.GetRect(), enemy->GetRect())) {
-                player.lives--;
+        // Collision with body
+        for (const Rectangle& bodyRect : player.GetBodyRects()) {
+            if (CheckCollisionRecs(bodyRect, enemy->GetRect())) {
                 enemy->active = false;
-                if (player.lives <= 0) gameOver = true;
-            }
-        }
-
-        if (fruit.active && CheckCollisionRecs(player.GetRect(), fruit.GetRect())) {
-            player.Grow();
-            fruit.active = false;
-            player.score += 10;
-
-            if (player.score % 50 == 0) {
-                level++;
-                speedFactor += 0.2f;
-                Init();
-            }
-            else {
-                fruit.Spawn(offset);
-            }
-        }
-
-        auto bodyRects = player.GetBodyRects();
-        for (auto& part : bodyRects) {
-            if (CheckCollisionRecs(player.GetRect(), part)) {
-                player.lives--;
-                if (player.lives <= 0) gameOver = true;
                 break;
             }
         }
     }
+
+    for (Trap& trap : traps) {
+        if (CheckCollisionRecs(trap.GetRect(), player.GetRect()))
+        {
+            player.lives--;
+            if (player.lives <= 0) gameOver = true;
+        }
+    }
+
+    if (!fruit.active)
+        fruit.Spawn(offset);
+
+    if (CheckCollisionRecs(player.GetRect(), fruit.GetRect())) {
+        player.score++;
+        player.Grow();
+        fruit.active = false;
+
+        if (player.score % 3 == 0 && level < 5) {
+            level++;
+            Init();
+        }
+    }
+
+    framesCounter++;
 }
 
-void Game::Draw() {
+void Game:: Draw() {
     BeginDrawing();
     ClearBackground(GetBackgroundColor());
 
     if (!gameOver) {
-        for (auto& trap : traps) trap.Draw();
-        for (auto& enemy : enemies) enemy->Draw();
+        fruit.Draw();
+        for (Trap& trap : traps) trap.Draw();
+        for (Enemy* enemy : enemies) enemy->Draw();
         player.Draw();
-        if (fruit.active) fruit.Draw();
-        DrawLifeBar();
+        DrawLifeBar();  // Draw the vertical life bar on the left
 
-        DrawText(TextFormat("Score: %i", player.score), 10, 10, 20, DARKGRAY);
-        DrawText(TextFormat("Level: %i", level), screenWidth - 100, 10, 20, DARKGRAY);
+        DrawText(TextFormat("Lives:"), 10, 10, 20, BLACK);
+        DrawText(TextFormat("Score: %d", player.score), 10, 30, 20, BLACK);
+        DrawText(TextFormat("Level: %d", level), 10, 50, 20, BLACK);
     }
     else {
-        DrawText("GAME OVER", screenWidth / 2 - 100, screenHeight / 2 - 30, 40, RED);
-        DrawText("PRESS [ENTER] TO RESTART", screenWidth / 2 - 150, screenHeight / 2 + 10, 20, LIGHTGRAY);
+        DrawText("GAME OVER", screenWidth / 2 - 80, screenHeight / 2 - 20, 40, RED);
+        DrawText("Press ENTER to Restart", screenWidth / 2 - 100, screenHeight / 2 + 30, 20, GRAY);
     }
+
 
     EndDrawing();
 }
+void Game:: DrawLifeBar() {
+    float barX = 85;                // Right next to "Lives:"
+    float barY = 12;
+    float totalWidth = 90;          // Full width when lives = MAX_LIVES
+    float height = 12;
 
-void Game::DrawLifeBar() {
-    for (int i = 0; i < MAX_LIVES; i++) {
-        DrawRectangle(10 + i * 35, 40, 30, 30, LIGHTGRAY);
-    }
-    for (int i = 0; i < player.lives; i++) {
-        DrawRectangle(10 + i * 35, 40, 30, 30, RED);
-    }
+    // Draw the background (gray)
+    DrawRectangle(barX, barY, totalWidth, height, GRAY);
+
+    // Calculate how much of the bar to fill
+    float filledWidth = totalWidth * ((float)player.lives / MAX_LIVES);
+
+    // Draw the filled portion in black
+    DrawRectangle(barX, barY, filledWidth, height, BLACK);
 }
 
-Color Game::GetBackgroundColor() {
-    if (level < 3) return RAYWHITE;
-    if (level < 6) return LIGHTGRAY;
-    if (level < 9) return GRAY;
-    return DARKGRAY;
+
+Color Game:: GetBackgroundColor() {
+    switch (level) {
+    case 1: return PINK;
+    case 2: return BEIGE;
+    case 3: return SKYBLUE;
+    case 4: return YELLOW;
+    case 5: return GREEN;
+    default: return PINK;
+    }
 }

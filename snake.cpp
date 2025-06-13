@@ -1,11 +1,8 @@
-#include "snake.h"
+#include"snake.h"
+#include"constants.h"
+#include "raylib.h"
 
-#define screenWidth 800
-#define screenHeight 450
-
-Snake::Snake(Vector2 pos, Vector2 spd, Color col)
-    : GameObject(pos, { 31.0f, 31.0f }, col), speed(spd) {
-}
+Snake::Snake(Vector2 pos, Vector2 spd, Color col) : GameObject(pos, { (float)SQUARE_SIZE, (float)SQUARE_SIZE }, col), speed(spd) {}
 
 void Snake::Update() {
     position.x += speed.x;
