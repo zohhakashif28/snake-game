@@ -1,0 +1,16 @@
+[Sun Jun 15 12:52:06 2025] Fruit collected.
+[Sun Jun 15 12:52:08 2025] Fruit collected.
+[Sun Jun 15 12:52:13 2025] Fruit collected.
+[Sun Jun 15 12:52:13 2025] Level up! 
+[Sun Jun 15 12:52:16 2025] Fruit collected.
+[Sun Jun 15 12:52:18 2025] Fruit collected.
+[Sun Jun 15 12:52:21 2025] Fruit collected.
+[Sun Jun 15 12:52:21 2025] Level up! 
+[Sun Jun 15 12:52:21 2025] Player hit by enemy.
+[Sun Jun 15 12:52:23 2025] Fruit collected.
+[Sun Jun 15 12:52:23 2025] Player hit by enemy.
+[Sun Jun 15 12:52:28 2025] Fruit collected.
+[Sun Jun 15 12:52:30 2025] Fruit collected.
+[Sun Jun 15 12:52:30 2025] Level up! 
+[Sun Jun 15 12:52:30 2025] Player hit a trap. Lives left: 
+[Sun Jun 15 12:52:30 2025] Game Over!

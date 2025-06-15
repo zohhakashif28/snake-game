@@ -6,6 +6,7 @@
 #include "raylib.h"
 #include <vector>
 #include"game.h"
+#include"logger.h"
 Game:: Game() : player({ screenWidth / 2.0f, screenHeight / 2.0f }, { 0, 0 }), level(1) {
     Init();
 }
@@ -49,7 +50,10 @@ void Game:: Update() {
 
 
     if (gameOver) {
-        if (IsKeyPressed(KEY_ENTER)) *this = Game();
+        if (IsKeyPressed(KEY_ENTER)) {
+            LogEvent("Game restarted.");
+            *this = Game();
+        }
         return;
     }
 
@@ -65,8 +69,13 @@ void Game:: Update() {
         // Collision with head
         if (CheckCollisionRecs(player.GetRect(), enemy->GetRect())) {
             player.lives--;
+            LogEvent("Player hit by enemy.");
+
             enemy->active = false;
-            if (player.lives <= 0) gameOver = true;
+            if (player.lives <= 0) {
+                gameOver = true;
+                LogEvent("Game Over!");
+            }
             continue;
         }
 
@@ -83,7 +92,12 @@ void Game:: Update() {
         if (CheckCollisionRecs(trap.GetRect(), player.GetRect()))
         {
             player.lives--;
-            if (player.lives <= 0) gameOver = true;
+            LogEvent("Player hit a trap.  ");
+
+            if (player.lives <= 0) {
+                gameOver = true;
+                LogEvent("Game Over!");
+            }
         }
     }
 
@@ -92,11 +106,14 @@ void Game:: Update() {
 
     if (CheckCollisionRecs(player.GetRect(), fruit.GetRect())) {
         player.score++;
+        LogEvent("Fruit collected.");
+
         player.Grow();
         fruit.active = false;
 
         if (player.score % 3 == 0 && level < 5) {
             level++;
+            LogEvent("Level up! ");
             Init();
         }
     }
